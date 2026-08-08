@@ -122,7 +122,7 @@ export default function NotesPage() {
       </div>
 
       <div className="task-board">
-        <div className="task-form" style={{ flexDirection: "column", alignItems: "stretch" }}>
+        <div className="task-form task-form--stacked">
           <label className="sr-only" htmlFor="idea-title">
             Project idea title
           </label>
@@ -142,9 +142,8 @@ export default function NotesPage() {
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             placeholder="Describe the project..."
-            className="task-input"
+            className="task-input task-textarea task-textarea--short"
             rows={5}
-            style={{ resize: "vertical", minHeight: "120px" }}
           />
 
           <label className="sr-only" htmlFor="idea-language">
@@ -164,7 +163,7 @@ export default function NotesPage() {
             ))}
           </select>
 
-          <div className="flex gap-3 flex-wrap">
+          <div className="form-actions">
             <button type="button" onClick={saveIdea} className="primary-btn task-add-button">
               {editingId ? "Save idea" : "Add idea"}
             </button>
@@ -183,23 +182,13 @@ export default function NotesPage() {
         ) : (
           <div className="list">
             {ideas.map((idea) => (
-              <article
-                key={idea.id}
-                className="item-card"
-                style={{
-                  background: "linear-gradient(135deg, #0f172a 0%, #172554 100%)",
-                  borderColor: "rgba(255,255,255,0.24)",
-                  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.28)",
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
+              <article key={idea.id} className="item-card idea-card">
+                <div className="entry-header">
                   <div>
-                    <h2 className="text-white" style={{ fontSize: "1.05rem" }}>{idea.title}</h2>
-                    <p className="mb-3 text-sm font-semibold text-cyan-300">
-                      Language: {idea.language}
-                    </p>
+                    <h2>{idea.title}</h2>
+                    <p className="idea-language">Language: {idea.language}</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="entry-actions">
                     <button type="button" onClick={() => startEditing(idea)} className="secondary-btn">
                       Edit
                     </button>
@@ -208,7 +197,7 @@ export default function NotesPage() {
                     </button>
                   </div>
                 </div>
-                <p style={{ whiteSpace: "pre-wrap", color: "#f8fbff", lineHeight: 1.8, fontSize: "0.96rem" }}>{idea.description}</p>
+                <p className="idea-body">{idea.description}</p>
               </article>
             ))}
           </div>

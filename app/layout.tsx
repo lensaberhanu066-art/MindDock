@@ -1,8 +1,6 @@
-import Footer from './components/Footer';
-import Navbar from './components/Navbar';
+import AppShell from './components/AppShell';
 import AuthGate from './components/AuthGate';
 import './globals.css';
-import Link from 'next/link';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -15,17 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <AuthGate>
-          <div className="shell">
-            <header className="topbar">
-              <Link href="/" className="brand">
-                <span className="brand-mark">✦</span>
-                <span>MindDock</span>
-              </Link>
-              <Navbar />
-            </header>
-            <main>{children}</main>
-          </div>
-          <Footer />
+          <AppShell>{children}</AppShell>
         </AuthGate>
       </body>
     </html>

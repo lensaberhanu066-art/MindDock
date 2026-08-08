@@ -26,9 +26,11 @@ export default function Navbar() {
   return (
     <>
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed left-4 top-4 z-50 flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-slate-900/80 text-2xl text-white shadow-lg backdrop-blur-lg transition hover:scale-105"
+        className="menu-toggle"
         aria-label="Open menu"
+        aria-expanded={isOpen}
       >
         ☰
       </button>

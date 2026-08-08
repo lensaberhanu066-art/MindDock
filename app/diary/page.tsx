@@ -96,7 +96,7 @@ export default function DiaryPage() {
       </div>
 
       <div className="task-board">
-        <div className="task-form" style={{ flexDirection: "column", alignItems: "stretch" }}>
+        <div className="task-form task-form--stacked">
           <label className="sr-only" htmlFor="diary-title">
             Entry title
           </label>
@@ -116,12 +116,11 @@ export default function DiaryPage() {
             value={content}
             onChange={(event) => setContent(event.target.value)}
             placeholder="Write about your day..."
-            className="task-input"
+            className="task-input task-textarea"
             rows={6}
-            style={{ resize: "vertical", minHeight: "140px" }}
           />
 
-          <div className="flex gap-3 flex-wrap">
+          <div className="form-actions">
             <button type="button" onClick={saveEntry} className="primary-btn task-add-button">
               {editingId ? "Save changes" : "Add entry"}
             </button>
@@ -141,14 +140,14 @@ export default function DiaryPage() {
           <div className="list">
             {entries.map((entry) => (
               <article key={entry.id} className="item-card">
-                <div className="flex items-start justify-between gap-3">
+                <div className="entry-header">
                   <div>
                     <h2>{entry.title}</h2>
-                    <p className="mb-3 text-sm text-slate-400">
+                    <p className="entry-meta">
                       {new Date(entry.updatedAt).toLocaleString()}
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="entry-actions">
                     <button type="button" onClick={() => startEditing(entry)} className="secondary-btn">
                       Edit
                     </button>
@@ -157,7 +156,7 @@ export default function DiaryPage() {
                     </button>
                   </div>
                 </div>
-                <p style={{ whiteSpace: "pre-wrap" }}>{entry.content}</p>
+                <p className="entry-body">{entry.content}</p>
               </article>
             ))}
           </div>
