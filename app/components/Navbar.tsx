@@ -38,12 +38,13 @@ export default function Navbar() {
       {isOpen && (
         <div
           onClick={() => setIsOpen(false)}
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+          className="sidebar-overlay fixed inset-0 z-40"
+          aria-hidden="true"
         />
       )}
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-full w-72 flex-col border-r border-white/10 bg-slate-950/95 shadow-2xl backdrop-blur-xl transition-transform duration-300 ${
+        className={`sidebar-panel fixed left-0 top-0 z-50 flex h-full w-72 flex-col border-r border-white/10  bg-slate-950/95 shadow-2xl transition-transform duration-300 ease-out ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -70,7 +71,7 @@ export default function Navbar() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setIsOpen(false)}
-                className={`flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                className={`flex items-center justify-between bg-slate-950 rounded-2xl px-4 py-3 text-sm font-medium transition ${
                   isActive
                     ? "bg-white/10 text-white shadow-sm"
                     : "text-slate-300 hover:bg-white/5 hover:text-white"
