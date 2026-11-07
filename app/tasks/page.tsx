@@ -1,58 +1,42 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-type Task = {
-  id: string;
-  title: string;
-  completed: boolean;
-};
-
-const STORAGE_KEY = "minddock-tasks";
+import { apiRequest, resourceRequest, Task } from "../lib/api-client";
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [draft, setDraft] = useState("");
 
   useEffect(() => {
-    const stored = globalThis.window?.localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setTasks(JSON.parse(stored));
-      } catch {
-        setTasks([]);
-      }
-    }
+    resourceRequest<Task[]>("tasks").then((result) => setTasks(result.data)).catch(() => setTasks([]));
   }, []);
 
-  useEffect(() => {
-    if (tasks.length) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-    } else {
-      window.localStorage.removeItem(STORAGE_KEY);
-    }
-  }, [tasks]);
-
-  const addTask = () => {
+  const addTask = async () => {
     const trimmed = draft.trim();
     if (!trimmed) return;
 
-    setTasks((current) => [
-      { id: crypto.randomUUID(), title: trimmed, completed: false },
-      ...current,
-    ]);
-    setDraft("");
+    try {
+      const result = await resourceRequest<Task>("tasks", {
+        method: "POST",
+        body: JSON.stringify({ title: trimmed }),
+      });
+      setTasks((current) => [result.data, ...current]);
+      setDraft("");
+    } catch {
+      return;
+    }
   };
 
-  const toggleTask = (id: string) => {
-    setTasks((current) =>
-      current.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
+  const toggleTask = async (task: Task) => {
+    const result = await resourceRequest<Task>("tasks", {
+      method: "PATCH",
+      body: JSON.stringify({ id: task.id, completed: !task.completed }),
+    });
+    setTasks((current) => current.map((item) => item.id === task.id ? result.data : item));
   };
 
-  const removeTask = (id: string) => {
+  const removeTask = async (id: string) => {
+    await apiRequest(`/api/tasks?id=${encodeURIComponent(id)}`, { method: "DELETE" });
     setTasks((current) => current.filter((task) => task.id !== id));
   };
 
@@ -93,7 +77,7 @@ export default function TasksPage() {
               <article key={task.id} className="item-card task-row">
                 <button
                   type="button"
-                  onClick={() => toggleTask(task.id)}
+                  onClick={() => toggleTask(task)}
                   className={`task-toggle ${task.completed ? "completed" : ""}`}
                 >
                   <span>{task.completed ? "✓" : "○"}</span>

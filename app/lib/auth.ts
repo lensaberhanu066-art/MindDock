@@ -1,106 +1,36 @@
-export type AuthUser = {
-  id: string;
-  name: string;
-  email: string;
-  password: string;
-  createdAt: string;
-};
+import { apiRequest, PublicUser } from "./api-client";
 
-const USERS_KEY = "minddock-users";
-const CURRENT_USER_KEY = "minddock-current-user";
+export type AuthUser = PublicUser;
 
-function getStoredUsers(): AuthUser[] {
-  if (typeof window === "undefined") return [];
+export async function getCurrentUser() {
+  const result = await apiRequest<{ user: AuthUser | null }>("/api/auth");
+  return result.user;
+}
 
+export async function registerUser(name: string, email: string, password: string) {
   try {
-    const stored = window.localStorage.getItem(USERS_KEY);
-    return stored ? (JSON.parse(stored) as AuthUser[]) : [];
-  } catch {
-    return [];
+    const result = await apiRequest<{ user: AuthUser }>("/api/auth", {
+      method: "POST",
+      body: JSON.stringify({ action: "register", name, email, password }),
+    });
+    return { success: true as const, message: `Welcome ${result.user.name}! Your account is ready.`, user: result.user };
+  } catch (error) {
+    return { success: false as const, message: error instanceof Error ? error.message : "Unable to create your account." };
   }
 }
 
-function saveUsers(users: AuthUser[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
-
-function saveCurrentUser(user: AuthUser | null) {
-  if (typeof window === "undefined") return;
-
-  if (user) {
-    window.localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
-  } else {
-    window.localStorage.removeItem(CURRENT_USER_KEY);
-  }
-}
-
-export function getCurrentUser(): AuthUser | null {
-  if (typeof window === "undefined") return null;
-
+export async function loginUser(email: string, password: string) {
   try {
-    const stored = window.localStorage.getItem(CURRENT_USER_KEY);
-    return stored ? (JSON.parse(stored) as AuthUser) : null;
-  } catch {
-    return null;
+    const result = await apiRequest<{ user: AuthUser }>("/api/auth", {
+      method: "POST",
+      body: JSON.stringify({ action: "login", email, password }),
+    });
+    return { success: true as const, message: `Welcome back, ${result.user.name}!`, user: result.user };
+  } catch (error) {
+    return { success: false as const, message: error instanceof Error ? error.message : "Unable to sign in." };
   }
 }
 
-export function registerUser(name: string, email: string, password: string) {
-  const users = getStoredUsers();
-  const normalizedEmail = email.trim().toLowerCase();
-
-  const existing = users.find((user) => user.email.toLowerCase() === normalizedEmail);
-  if (existing) {
-    return {
-      success: false as const,
-      message: "An account with this email already exists.",
-    };
-  }
-
-  const newUser: AuthUser = {
-    id: crypto.randomUUID(),
-    name: name.trim(),
-    email: normalizedEmail,
-    password,
-    createdAt: new Date().toISOString(),
-  };
-
-  const nextUsers = [newUser, ...users];
-  saveUsers(nextUsers);
-  saveCurrentUser(newUser);
-
-  return {
-    success: true as const,
-    message: `Welcome ${newUser.name}! Your account is ready.`,
-    user: newUser,
-  };
-}
-
-export function loginUser(email: string, password: string) {
-  const users = getStoredUsers();
-  const normalizedEmail = email.trim().toLowerCase();
-
-  const match = users.find(
-    (user) => user.email.toLowerCase() === normalizedEmail && user.password === password
-  );
-
-  if (!match) {
-    return {
-      success: false as const,
-      message: "Invalid email or password.",
-    };
-  }
-
-  saveCurrentUser(match);
-
-  return {
-    success: true as const,
-    message: `Welcome back, ${match.name}!`,
-    user: match,
-  };
-}
-
-export function logoutUser() {
-  saveCurrentUser(null);
+export async function logoutUser() {
+  await apiRequest("/api/auth", { method: "POST", body: JSON.stringify({ action: "logout" }) });
 }

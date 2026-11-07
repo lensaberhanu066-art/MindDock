@@ -1,6 +1,7 @@
 # Dependency directories
 node_modules/
 .next/
+data/minddock.json
 
 # Environment variables
 .env

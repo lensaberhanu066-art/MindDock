@@ -2,74 +2,36 @@
 
 import Link from 'next/link';
 import { useEffect, useState, useMemo } from 'react';
-
-type Task = {
-  id: string;
-  title: string;
-  completed: boolean;
-};
-
-type DiaryEntry = {
-  id: string;
-  title: string;
-  content: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type ProjectIdea = {
-  id: string;
-  title: string;
-  description: string;
-  language: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-const STORAGE_KEYS = {
-  tasks: 'minddock-tasks',
-  diary: 'minddock-diary',
-  notes: 'minddock-notes',
-};
+import { apiRequest, DiaryEntry, ProjectIdea, Task } from './lib/api-client';
 
 export default function HomePage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
   const [ideas, setIdeas] = useState<ProjectIdea[]>([]);
+  const [counts, setCounts] = useState({ tasks: 0, openTasks: 0, completedTasks: 0, diary: 0, notes: 0 });
 
   useEffect(() => {
-    const storedTasks = window.localStorage.getItem(STORAGE_KEYS.tasks);
-    const storedEntries = window.localStorage.getItem(STORAGE_KEYS.diary);
-    const storedIdeas = window.localStorage.getItem(STORAGE_KEYS.notes);
-
-    if (storedTasks) {
-      try {
-        setTasks(JSON.parse(storedTasks));
-      } catch {
+    apiRequest<{
+      data: {
+        counts: { tasks: number; openTasks: number; completedTasks: number; diary: number; notes: number };
+        recent: { tasks: Task[]; diary: DiaryEntry[]; notes: ProjectIdea[] };
+      };
+    }>('/api/dashboard')
+      .then(({ data }) => {
+        setCounts(data.counts);
+        setTasks(data.recent.tasks);
+        setEntries(data.recent.diary);
+        setIdeas(data.recent.notes);
+      })
+      .catch(() => {
         setTasks([]);
-      }
-    }
-
-    if (storedEntries) {
-      try {
-        setEntries(JSON.parse(storedEntries));
-      } catch {
         setEntries([]);
-      }
-    }
-
-    if (storedIdeas) {
-      try {
-        setIdeas(JSON.parse(storedIdeas));
-      } catch {
         setIdeas([]);
-      }
-    }
+      });
   }, []);
 
-  const activeTasks = tasks.filter((task) => !task.completed).length;
-  const completedTasks = tasks.length - activeTasks;
-  const taskProgress = tasks.length ? Math.round((completedTasks / tasks.length) * 100) : 0;
+  const activeTasks = counts.openTasks;
+  const taskProgress = counts.tasks ? Math.round((counts.completedTasks / counts.tasks) * 100) : 0;
   const recentTasks = tasks.slice(0, 3);
   const recentEntries = entries.slice(0, 2);
   const recentIdeas = ideas.slice(0, 2);
@@ -79,26 +41,26 @@ export default function HomePage() {
       {
         label: 'Open tasks',
         value: activeTasks,
-        detail: `${tasks.length} total task${tasks.length === 1 ? '' : 's'}`,
+        detail: `${counts.tasks} total task${counts.tasks === 1 ? '' : 's'}`,
         href: '/tasks',
         accent: 'tasks',
       },
       {
         label: 'Diary entries',
-        value: entries.length,
-        detail: entries.length === 1 ? 'One entry saved' : 'Entries saved',
+        value: counts.diary,
+        detail: counts.diary === 1 ? 'One entry saved' : 'Entries saved',
         href: '/diary',
         accent: 'diary',
       },
       {
         label: 'Notes',
-        value: ideas.length,
-        detail: ideas.length === 1 ? 'One idea captured' : 'Ideas captured',
+        value: counts.notes,
+        detail: counts.notes === 1 ? 'One idea captured' : 'Ideas captured',
         href: '/notes',
         accent: 'notes',
       },
     ],
-    [activeTasks, tasks.length, entries.length, ideas.length],
+    [activeTasks, counts.tasks, counts.diary, counts.notes],
   );
 
   return (
@@ -132,7 +94,7 @@ export default function HomePage() {
         ))}
       </div>
 
-      {tasks.length > 0 && (
+      {counts.tasks > 0 && (
         <div className="progress-strip dashboard-reveal" style={{ animationDelay: '240ms' }}>
           <div className="progress-strip-copy">
             <p className="overview-label">Task completion</p>

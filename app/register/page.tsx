@@ -12,7 +12,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!name.trim() || !email.trim() || !password.trim()) {
@@ -25,7 +25,7 @@ export default function RegisterPage() {
       return;
     }
 
-    const result = registerUser(name, email, password);
+    const result = await registerUser(name, email, password);
     setMessage(result.message);
 
     if (result.success) {

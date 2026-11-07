@@ -1,17 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-type ProjectIdea = {
-  id: string;
-  title: string;
-  description: string;
-  language: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-const STORAGE_KEY = "minddock-notes";
+import { apiRequest, ProjectIdea, resourceRequest } from "../lib/api-client";
 const LANGUAGE_OPTIONS = [
   "TypeScript",
   "JavaScript",
@@ -35,23 +25,8 @@ export default function NotesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = globalThis.window?.localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setIdeas(JSON.parse(stored));
-      } catch {
-        setIdeas([]);
-      }
-    }
+    resourceRequest<ProjectIdea[]>("notes").then((result) => setIdeas(result.data)).catch(() => setIdeas([]));
   }, []);
-
-  useEffect(() => {
-    if (ideas.length) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(ideas));
-    } else {
-      window.localStorage.removeItem(STORAGE_KEY);
-    }
-  }, [ideas]);
 
   const resetForm = () => {
     setTitle("");
@@ -60,43 +35,20 @@ export default function NotesPage() {
     setEditingId(null);
   };
 
-  const saveIdea = () => {
+  const saveIdea = async () => {
     const trimmedTitle = title.trim();
     const trimmedDescription = description.trim();
     const trimmedLanguage = language.trim();
 
     if (!trimmedTitle || !trimmedDescription || !trimmedLanguage) return;
 
-    const now = new Date().toISOString();
-
-    if (editingId) {
-      setIdeas((current) =>
-        current.map((idea) =>
-          idea.id === editingId
-            ? {
-                ...idea,
-                title: trimmedTitle,
-                description: trimmedDescription,
-                language: trimmedLanguage,
-                updatedAt: now,
-              }
-            : idea
-        )
-      );
-    } else {
-      setIdeas((current) => [
-        {
-          id: crypto.randomUUID(),
-          title: trimmedTitle,
-          description: trimmedDescription,
-          language: trimmedLanguage,
-          createdAt: now,
-          updatedAt: now,
-        },
-        ...current,
-      ]);
-    }
-
+    const result = await resourceRequest<ProjectIdea>("notes", {
+      method: editingId ? "PATCH" : "POST",
+      body: JSON.stringify({ id: editingId, title: trimmedTitle, description: trimmedDescription, language: trimmedLanguage }),
+    });
+    setIdeas((current) => editingId
+      ? current.map((idea) => idea.id === editingId ? result.data : idea)
+      : [result.data, ...current]);
     resetForm();
   };
 
@@ -107,7 +59,8 @@ export default function NotesPage() {
     setLanguage(idea.language);
   };
 
-  const removeIdea = (id: string) => {
+  const removeIdea = async (id: string) => {
+    await apiRequest(`/api/notes?id=${encodeURIComponent(id)}`, { method: "DELETE" });
     setIdeas((current) => current.filter((idea) => idea.id !== id));
     if (editingId === id) resetForm();
   };

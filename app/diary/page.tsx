@@ -1,16 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-type DiaryEntry = {
-  id: string;
-  title: string;
-  content: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-const STORAGE_KEY = "minddock-diary";
+import { apiRequest, DiaryEntry, resourceRequest } from "../lib/api-client";
 
 export default function DiaryPage() {
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
@@ -19,23 +10,8 @@ export default function DiaryPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = globalThis.window?.localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setEntries(JSON.parse(stored));
-      } catch {
-        setEntries([]);
-      }
-    }
+    resourceRequest<DiaryEntry[]>("diary").then((result) => setEntries(result.data)).catch(() => setEntries([]));
   }, []);
-
-  useEffect(() => {
-    if (entries.length) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-    } else {
-      window.localStorage.removeItem(STORAGE_KEY);
-    }
-  }, [entries]);
 
   const resetForm = () => {
     setTitle("");
@@ -43,35 +19,19 @@ export default function DiaryPage() {
     setEditingId(null);
   };
 
-  const saveEntry = () => {
+  const saveEntry = async () => {
     const trimmedTitle = title.trim();
     const trimmedContent = content.trim();
 
     if (!trimmedTitle || !trimmedContent) return;
 
-    const now = new Date().toISOString();
-
-    if (editingId) {
-      setEntries((current) =>
-        current.map((entry) =>
-          entry.id === editingId
-            ? { ...entry, title: trimmedTitle, content: trimmedContent, updatedAt: now }
-            : entry
-        )
-      );
-    } else {
-      setEntries((current) => [
-        {
-          id: crypto.randomUUID(),
-          title: trimmedTitle,
-          content: trimmedContent,
-          createdAt: now,
-          updatedAt: now,
-        },
-        ...current,
-      ]);
-    }
-
+    const result = await resourceRequest<DiaryEntry>("diary", {
+      method: editingId ? "PATCH" : "POST",
+      body: JSON.stringify({ id: editingId, title: trimmedTitle, content: trimmedContent }),
+    });
+    setEntries((current) => editingId
+      ? current.map((entry) => entry.id === editingId ? result.data : entry)
+      : [result.data, ...current]);
     resetForm();
   };
 
@@ -81,7 +41,8 @@ export default function DiaryPage() {
     setContent(entry.content);
   };
 
-  const removeEntry = (id: string) => {
+  const removeEntry = async (id: string) => {
+    await apiRequest(`/api/diary?id=${encodeURIComponent(id)}`, { method: "DELETE" });
     setEntries((current) => current.filter((entry) => entry.id !== id));
     if (editingId === id) resetForm();
   };

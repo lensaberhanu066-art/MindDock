@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, logoutUser } from "../lib/auth";
@@ -15,10 +15,15 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const currentUser = getCurrentUser();
+  const [currentUser, setCurrentUser] = useState<Awaited<ReturnType<typeof getCurrentUser>>>(null);
 
-  const handleLogout = () => {
-    logoutUser();
+  useEffect(() => {
+    getCurrentUser().then(setCurrentUser).catch(() => setCurrentUser(null));
+  }, []);
+
+  const handleLogout = async () => {
+    await logoutUser();
+    setCurrentUser(null);
     setIsOpen(false);
     router.push("/login");
   };

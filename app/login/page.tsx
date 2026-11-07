@@ -11,7 +11,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!email.trim() || !password.trim()) {
@@ -19,7 +19,7 @@ export default function LoginPage() {
       return;
     }
 
-    const result = loginUser(email, password);
+    const result = await loginUser(email, password);
     setMessage(result.message);
 
     if (result.success) {
