@@ -1,43 +1,26 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { getCurrentUser } from '../lib/auth';
+import { useEffect } from 'react';
+import { useAuth } from './AuthProvider';
+import LoadingState from './LoadingState';
 
-const PUBLIC_PATHS = ['/', '/login', '/register'];
+const PUBLIC_PATHS = ['/login', '/register'];
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [ready, setReady] = useState(false);
+  const { user, isLoading } = useAuth();
+  const isPublic = PUBLIC_PATHS.includes(pathname);
 
   useEffect(() => {
-    let active = true;
-    getCurrentUser().then((user) => {
-      if (!active) return;
-      const isPublic = PUBLIC_PATHS.includes(pathname);
+    if (isLoading) return;
+    if (!user && !isPublic) router.replace('/login');
+    else if (user && isPublic) router.replace('/');
+  }, [isLoading, isPublic, pathname, router, user]);
 
-      if (!user && !isPublic) {
-        router.replace('/login');
-        return;
-      }
-
-      if (user && (pathname === '/login' || pathname === '/register')) {
-        router.replace('/');
-        return;
-      }
-
-      setReady(true);
-    }).catch(() => {
-      if (PUBLIC_PATHS.includes(pathname)) setReady(true);
-      else router.replace('/login');
-    });
-
-    return () => { active = false; };
-  }, [pathname, router]);
-
-  if (!ready) {
-    return null;
+  if (isLoading || (!user && !isPublic) || (user && isPublic)) {
+    return <LoadingState label="Checking your session..." />;
   }
 
   return <>{children}</>;

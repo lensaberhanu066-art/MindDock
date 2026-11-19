@@ -3,14 +3,18 @@
 import Link from 'next/link';
 import { useEffect, useState, useMemo } from 'react';
 import { apiRequest, DiaryEntry, ProjectIdea, Task } from './lib/api-client';
+import LoadingState from './components/LoadingState';
 
 export default function HomePage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
   const [ideas, setIdeas] = useState<ProjectIdea[]>([]);
   const [counts, setCounts] = useState({ tasks: 0, openTasks: 0, completedTasks: 0, diary: 0, notes: 0 });
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
+    let active = true;
     apiRequest<{
       data: {
         counts: { tasks: number; openTasks: number; completedTasks: number; diary: number; notes: number };
@@ -18,16 +22,19 @@ export default function HomePage() {
       };
     }>('/api/dashboard')
       .then(({ data }) => {
+        if (!active) return;
         setCounts(data.counts);
         setTasks(data.recent.tasks);
         setEntries(data.recent.diary);
         setIdeas(data.recent.notes);
       })
-      .catch(() => {
-        setTasks([]);
-        setEntries([]);
-        setIdeas([]);
+      .catch((error: unknown) => {
+        if (active) setErrorMessage(error instanceof Error ? error.message : "Unable to load your dashboard.");
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
       });
+    return () => { active = false; };
   }, []);
 
   const activeTasks = counts.openTasks;
@@ -62,6 +69,14 @@ export default function HomePage() {
     ],
     [activeTasks, counts.tasks, counts.diary, counts.notes],
   );
+
+  if (isLoading) {
+    return <section className="dashboard"><LoadingState label="Loading your dashboard..." /></section>;
+  }
+
+  if (errorMessage) {
+    return <section className="dashboard"><p className="form-error" role="alert">{errorMessage}</p></section>;
+  }
 
   return (
     <section className="dashboard">

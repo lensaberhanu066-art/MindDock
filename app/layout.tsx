@@ -1,4 +1,5 @@
 import AppShell from './components/AppShell';
+import { AuthProvider } from './components/AuthProvider';
 import AuthGate from './components/AuthGate';
 import './globals.css';
 import type { Metadata } from 'next';
@@ -12,9 +13,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <AuthGate>
-          <AppShell>{children}</AppShell>
-        </AuthGate>
+        <AuthProvider>
+          <AuthGate>
+            <AppShell>{children}</AppShell>
+          </AuthGate>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -3,33 +3,55 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { registerUser } from "../lib/auth";
+import { useAuth } from "../components/AuthProvider";
+import { MAX_EMAIL_LENGTH, MAX_NAME_LENGTH } from "../lib/input-limits";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { register } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setHasError(false);
 
     if (!name.trim() || !email.trim() || !password.trim()) {
       setMessage("Please fill in all fields to create your account.");
+      setHasError(true);
       return;
     }
 
-    if (password.length < 6) {
-      setMessage("Password must be at least 6 characters long.");
+    if (password.length < 12) {
+      setMessage("Password must be at least 12 characters long.");
+      setHasError(true);
       return;
     }
 
-    const result = await registerUser(name, email, password);
-    setMessage(result.message);
+    if (password.length > 128) {
+      setMessage("Password must be no more than 128 characters long.");
+      setHasError(true);
+      return;
+    }
 
-    if (result.success) {
-      router.push("/");
+    setIsSubmitting(true);
+    try {
+      const result = await register(name, email, password);
+      setMessage(result.message);
+      setHasError(!result.success);
+
+      if (result.success) {
+        router.push("/");
+      }
+    } catch (error) {
+      setHasError(true);
+      setMessage(error instanceof Error ? error.message : "Unable to create your account. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -55,6 +77,7 @@ export default function RegisterPage() {
               id="name"
               type="text"
               value={name}
+              maxLength={MAX_NAME_LENGTH}
               onChange={(event) => setName(event.target.value)}
               placeholder="Your name"
               className="w-full rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-white outline-none transition focus:border-sky-400"
@@ -69,6 +92,7 @@ export default function RegisterPage() {
               id="email"
               type="email"
               value={email}
+              maxLength={MAX_EMAIL_LENGTH}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="you@example.com"
               className="w-full rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-white outline-none transition focus:border-sky-400"
@@ -84,20 +108,22 @@ export default function RegisterPage() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="Create a password"
+              maxLength={128}
+              placeholder="Create a password (12 characters minimum)"
               className="w-full rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-white outline-none transition focus:border-sky-400"
             />
           </div>
 
           <button
             type="submit"
+            disabled={isSubmitting}
             className="w-full rounded-2xl bg-gradient-to-r from-sky-400 to-violet-500 px-4 py-3 font-semibold text-white transition hover:opacity-90"
           >
-            Create account
+            {isSubmitting ? "Creating account..." : "Create account"}
           </button>
 
           {message ? (
-            <p className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-sm text-cyan-200">
+            <p role={hasError ? "alert" : "status"} className={`rounded-2xl border px-3 py-2 text-sm ${hasError ? "border-rose-400/20 bg-rose-400/10 text-rose-200" : "border-cyan-400/20 bg-cyan-400/10 text-cyan-200"}`}>
               {message}
             </p>
           ) : null}

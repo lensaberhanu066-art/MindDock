@@ -2,19 +2,41 @@
 
 import { useEffect, useState } from "react";
 import { apiRequest, resourceRequest, Task } from "../lib/api-client";
+import LoadingState from "../components/LoadingState";
+import { MAX_TASK_TITLE_LENGTH } from "../lib/input-limits";
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [draft, setDraft] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isMutating, setIsMutating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [hasLoadError, setHasLoadError] = useState(false);
 
   useEffect(() => {
-    resourceRequest<Task[]>("tasks").then((result) => setTasks(result.data)).catch(() => setTasks([]));
+    let active = true;
+    resourceRequest<Task[]>("tasks")
+      .then((result) => {
+        if (active) setTasks(result.data);
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setHasLoadError(true);
+          setErrorMessage(error instanceof Error ? error.message : "Unable to load tasks.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => { active = false; };
   }, []);
 
   const addTask = async () => {
     const trimmed = draft.trim();
-    if (!trimmed) return;
+    if (!trimmed || isMutating) return;
 
+    setIsMutating(true);
+    setErrorMessage("");
     try {
       const result = await resourceRequest<Task>("tasks", {
         method: "POST",
@@ -22,22 +44,42 @@ export default function TasksPage() {
       });
       setTasks((current) => [result.data, ...current]);
       setDraft("");
-    } catch {
-      return;
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to add this task.");
+    } finally {
+      setIsMutating(false);
     }
   };
 
   const toggleTask = async (task: Task) => {
-    const result = await resourceRequest<Task>("tasks", {
-      method: "PATCH",
-      body: JSON.stringify({ id: task.id, completed: !task.completed }),
-    });
-    setTasks((current) => current.map((item) => item.id === task.id ? result.data : item));
+    if (isMutating) return;
+    setIsMutating(true);
+    setErrorMessage("");
+    try {
+      const result = await resourceRequest<Task>("tasks", {
+        method: "PATCH",
+        body: JSON.stringify({ id: task.id, completed: !task.completed }),
+      });
+      setTasks((current) => current.map((item) => item.id === task.id ? result.data : item));
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to update this task.");
+    } finally {
+      setIsMutating(false);
+    }
   };
 
   const removeTask = async (id: string) => {
-    await apiRequest(`/api/tasks?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-    setTasks((current) => current.filter((task) => task.id !== id));
+    if (isMutating) return;
+    setIsMutating(true);
+    setErrorMessage("");
+    try {
+      await apiRequest(`/api/tasks?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      setTasks((current) => current.filter((task) => task.id !== id));
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to remove this task.");
+    } finally {
+      setIsMutating(false);
+    }
   };
 
   return (
@@ -57,17 +99,21 @@ export default function TasksPage() {
           <input
             id="task-input"
             value={draft}
+            maxLength={MAX_TASK_TITLE_LENGTH}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => event.key === "Enter" && addTask()}
             placeholder="Add a new task..."
             className="task-input"
           />
-          <button type="button" onClick={addTask} className="primary-btn task-add-button">
-            Add task
+          <button type="button" onClick={addTask} disabled={isMutating} className="primary-btn task-add-button">
+            {isMutating ? "Saving..." : "Add task"}
           </button>
         </div>
 
-        {tasks.length === 0 ? (
+        {errorMessage ? <p className="form-error" role="alert">{errorMessage}</p> : null}
+        {isLoading ? (
+          <LoadingState label="Loading tasks..." />
+        ) : hasLoadError ? null : tasks.length === 0 ? (
           <div className="item-card">
             <p>No tasks yet. Add one to get started.</p>
           </div>
@@ -78,6 +124,7 @@ export default function TasksPage() {
                 <button
                   type="button"
                   onClick={() => toggleTask(task)}
+                  disabled={isMutating}
                   className={`task-toggle ${task.completed ? "completed" : ""}`}
                 >
                   <span>{task.completed ? "✓" : "○"}</span>
@@ -85,7 +132,7 @@ export default function TasksPage() {
                     {task.title}
                   </span>
                 </button>
-                <button type="button" onClick={() => removeTask(task.id)} className="secondary-btn task-remove-button">
+                <button type="button" onClick={() => removeTask(task.id)} disabled={isMutating} className="secondary-btn task-remove-button">
                   Remove
                 </button>
               </article>

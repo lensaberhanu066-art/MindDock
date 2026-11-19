@@ -3,27 +3,42 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { loginUser } from "../lib/auth";
+import { useAuth } from "../components/AuthProvider";
+import { MAX_EMAIL_LENGTH } from "../lib/input-limits";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setHasError(false);
 
     if (!email.trim() || !password.trim()) {
       setMessage("Please enter both your email and password.");
+      setHasError(true);
       return;
     }
 
-    const result = await loginUser(email, password);
-    setMessage(result.message);
+    setIsSubmitting(true);
+    try {
+      const result = await login(email, password);
+      setMessage(result.message);
+      setHasError(!result.success);
 
-    if (result.success) {
-      router.push("/");
+      if (result.success) {
+        router.push("/");
+      }
+    } catch (error) {
+      setHasError(true);
+      setMessage(error instanceof Error ? error.message : "Unable to sign in. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -49,6 +64,7 @@ export default function LoginPage() {
               id="email"
               type="email"
               value={email}
+              maxLength={MAX_EMAIL_LENGTH}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="you@example.com"
               className="w-full rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-white outline-none transition focus:border-sky-400"
@@ -63,6 +79,7 @@ export default function LoginPage() {
               id="password"
               type="password"
               value={password}
+              maxLength={1024}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="Enter your password"
               className="w-full rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-white outline-none transition focus:border-sky-400"
@@ -71,13 +88,14 @@ export default function LoginPage() {
 
           <button
             type="submit"
+            disabled={isSubmitting}
             className="w-full rounded-2xl bg-gradient-to-r from-sky-400 to-violet-500 px-4 py-3 font-semibold text-white transition hover:opacity-90"
           >
-            Sign in
+            {isSubmitting ? "Signing in..." : "Sign in"}
           </button>
 
           {message ? (
-            <p className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-sm text-cyan-200">
+            <p role={hasError ? "alert" : "status"} className={`rounded-2xl border px-3 py-2 text-sm ${hasError ? "border-rose-400/20 bg-rose-400/10 text-rose-200" : "border-cyan-400/20 bg-cyan-400/10 text-cyan-200"}`}>
               {message}
             </p>
           ) : null}

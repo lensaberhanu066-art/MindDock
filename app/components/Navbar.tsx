@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { getCurrentUser, logoutUser } from "../lib/auth";
+import { useAuth } from "./AuthProvider";
 
 const NAV_ITEMS = [
   { label: "Tasks", href: "/tasks" },
@@ -14,18 +14,23 @@ const NAV_ITEMS = [
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { user: currentUser, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<Awaited<ReturnType<typeof getCurrentUser>>>(null);
-
-  useEffect(() => {
-    getCurrentUser().then(setCurrentUser).catch(() => setCurrentUser(null));
-  }, []);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
 
   const handleLogout = async () => {
-    await logoutUser();
-    setCurrentUser(null);
-    setIsOpen(false);
-    router.push("/login");
+    setIsLoggingOut(true);
+    setLogoutError("");
+    try {
+      await logout();
+      setIsOpen(false);
+      router.push("/login");
+    } catch (error) {
+      setLogoutError(error instanceof Error ? error.message : "Unable to log out. Please try again.");
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -94,13 +99,17 @@ export default function Navbar() {
         </div>
 
         {currentUser ? (
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="mx-4 mb-4 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-left text-sm font-medium text-white transition hover:bg-white/20"
-          >
-            Logout ({currentUser.name})
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="mx-4 mb-4 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-left text-sm font-medium text-white transition hover:bg-white/20 disabled:opacity-60"
+            >
+              {isLoggingOut ? "Logging out..." : `Logout (${currentUser.name})`}
+            </button>
+            {logoutError ? <p className="mx-4 mb-4 text-sm text-rose-300" role="alert">{logoutError}</p> : null}
+          </>
         ) : null}
       </aside>
     </>

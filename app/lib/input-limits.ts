@@ -1,0 +1,8 @@
+export const MAX_NAME_LENGTH = 100;
+export const MAX_EMAIL_LENGTH = 254;
+export const MAX_TASK_TITLE_LENGTH = 200;
+export const MAX_DIARY_TITLE_LENGTH = 200;
+export const MAX_DIARY_CONTENT_LENGTH = 20000;
+export const MAX_NOTE_TITLE_LENGTH = 200;
+export const MAX_NOTE_DESCRIPTION_LENGTH = 10000;
+export const MAX_NOTE_LANGUAGE_LENGTH = 50;
